@@ -69,23 +69,19 @@
 <body>
     <header>
         <h1>Text Converter</h1>
-        <p>Real-Time Encode and Decode Text in Various Formats</p>
+        <p>Encode and Decode Text in Various Formats</p>
     </header>
     <div class="content">
-        <textarea id="inputText" placeholder="Enter your text here..." oninput="convertText()"></textarea>
-        <select id="conversionType" onchange="convertText()">
+        <textarea id="inputText" placeholder="Enter your text here..."></textarea>
+        <select id="conversionType">
             <option value="base85">Base85</option>
             <option value="base64">Base64</option>
             <option value="base32">Base32</option>
             <option value="base16">Base16</option>
         </select>
         <div>
-            <label>
-                <input type="radio" name="conversionMode" value="encode" checked onchange="convertText()"> Encode
-            </label>
-            <label>
-                <input type="radio" name="conversionMode" value="decode" onchange="convertText()"> Decode
-            </label>
+            <button onclick="encodeText()">Encode</button>
+            <button onclick="decodeText()">Decode</button>
         </div>
         <textarea id="outputText" placeholder="Output will appear here..." readonly></textarea>
     </div>
@@ -93,72 +89,71 @@
         <p>Made with ❤️ | DDp :)</p>
     </footer>
     <script>
-        // Function to handle real-time conversion
-        function convertText() {
+        // Function to encode text
+        function encodeText() {
             const input = document.getElementById('inputText').value;
             const type = document.getElementById('conversionType').value;
-            const mode = document.querySelector('input[name="conversionMode"]:checked').value;
-
-            if (!input) {
-                document.getElementById('outputText').value = '';
-                return;
-            }
-
             try {
                 let result;
-                if (mode === 'encode') {
-                    switch (type) {
-                        case 'base85':
-                            result = encodeBase85(input);
-                            break;
-                        case 'base64':
-                            result = btoa(unescape(encodeURIComponent(input))); // Base64 encoding
-                            break;
-                        case 'base32':
-                            result = base32Encode(input);
-                            break;
-                        case 'base16':
-                            result = input.split('').map(char => char.charCodeAt(0).toString(16).padStart(2, '0')).join('');
-                            break;
-                        default:
-                            throw new Error('Unsupported encoding type');
-                    }
-                } else if (mode === 'decode') {
-                    switch (type) {
-                        case 'base85':
-                            result = decodeBase85(input);
-                            break;
-                        case 'base64':
-                            result = decodeURIComponent(escape(atob(input))); // Base64 decoding
-                            break;
-                        case 'base32':
-                            result = base32Decode(input);
-                            break;
-                        case 'base16':
-                            result = input.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
-                            break;
-                        default:
-                            throw new Error('Unsupported decoding type');
-                    }
+                switch (type) {
+                    case 'base85':
+                        result = encodeBase85(input);
+                        break;
+                    case 'base64':
+                        result = btoa(unescape(encodeURIComponent(input))); // Base64 encoding
+                        break;
+                    case 'base32':
+                        result = base32Encode(input);
+                        break;
+                    case 'base16':
+                        result = input.split('').map(char => char.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+                        break;
+                    default:
+                        throw new Error('Unsupported encoding type');
                 }
                 document.getElementById('outputText').value = result;
             } catch (e) {
-                document.getElementById('outputText').value = 'Error: Invalid input for the selected mode and type.';
+                alert("Error encoding the text. Please ensure it's a valid input!");
             }
         }
 
-        // Base85 (Ascii85) encoding function
+        // Function to decode text
+        function decodeText() {
+            const input = document.getElementById('inputText').value;
+            const type = document.getElementById('conversionType').value;
+            try {
+                let result;
+                switch (type) {
+                    case 'base85':
+                        result = decodeBase85(input);
+                        break;
+                    case 'base64':
+                        result = decodeURIComponent(escape(atob(input))); // Base64 decoding
+                        break;
+                    case 'base32':
+                        result = base32Decode(input);
+                        break;
+                    case 'base16':
+                        result = input.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
+                        break;
+                    default:
+                        throw new Error('Unsupported decoding type');
+                }
+                document.getElementById('outputText').value = result;
+            } catch (e) {
+                alert("Error decoding the text. Please ensure it's a valid encoded input!");
+            }
+        }
+
+        // Base85 encoding function
         function encodeBase85(input) {
             const encoder = new TextEncoder();
             const bytes = encoder.encode(input);
             let result = '';
-            const paddingLength = (4 - (bytes.length % 4)) % 4;
-            const paddedBytes = new Uint8Array([...bytes, ...new Uint8Array(paddingLength).fill(0)]);
-
-            for (let i = 0; i < paddedBytes.length; i += 4) {
-                const chunk = paddedBytes.slice(i, i + 4);
+            for (let i = 0; i < bytes.length; i += 4) {
+                const chunk = bytes.slice(i, i + 4);
                 let value = 0;
-                for (let j = 0; j < 4; j++) {
+                for (let j = 0; j < chunk.length; j++) {
                     value = (value << 8) + chunk[j];
                 }
                 let encoded = '';
@@ -168,22 +163,17 @@
                 }
                 result += encoded;
             }
-
-            // Remove extra padding characters
-            return result.slice(0, result.length - paddingLength);
+            return result;
         }
 
-        // Base85 (Ascii85) decoding function
+        // Base85 decoding function
         function decodeBase85(input) {
             const decoder = new TextDecoder();
-            const paddingLength = (5 - (input.length % 5)) % 5;
-            const paddedInput = input + 'u'.repeat(paddingLength);
             let bytes = [];
-
-            for (let i = 0; i < paddedInput.length; i += 5) {
-                const chunk = paddedInput.slice(i, i + 5);
+            for (let i = 0; i < input.length; i += 5) {
+                const chunk = input.slice(i, i + 5);
                 let value = 0;
-                for (let j = 0; j < 5; j++) {
+                for (let j = 0; j < chunk.length; j++) {
                     value = value * 85 + (chunk.charCodeAt(j) - 33);
                 }
                 let decoded = [];
@@ -193,9 +183,7 @@
                 }
                 bytes = bytes.concat(decoded);
             }
-
-            // Remove padding bytes
-            return decoder.decode(new Uint8Array(bytes.slice(0, bytes.length - paddingLength)));
+            return decoder.decode(new Uint8Array(bytes));
         }
 
         // Base32 encoding function
