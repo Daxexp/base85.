@@ -78,10 +78,6 @@
             <option value="base64">Base64</option>
             <option value="base32">Base32</option>
             <option value="base16">Base16</option>
-            <option value="rot13">Rot13</option>
-            <option value="morse">Morse Code</option>
-            <option value="url">URL Encoding</option>
-            <option value="binary">Binary</option>
         </select>
         <div>
             <button onclick="encodeText()">Encode</button>
@@ -112,22 +108,6 @@
                     case 'base16':
                         result = input.split('').map(char => char.charCodeAt(0).toString(16).padStart(2, '0')).join('');
                         break;
-                    case 'rot13':
-                        result = input.replace(/[a-zA-Z]/g, char =>
-                            String.fromCharCode(
-                                char.charCodeAt(0) + (char.toLowerCase() < 'n' ? 13 : -13)
-                            )
-                        );
-                        break;
-                    case 'morse':
-                        result = encodeMorse(input);
-                        break;
-                    case 'url':
-                        result = encodeURIComponent(input);
-                        break;
-                    case 'binary':
-                        result = input.split('').map(char => char.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
-                        break;
                     default:
                         throw new Error('Unsupported encoding type');
                 }
@@ -156,22 +136,6 @@
                     case 'base16':
                         result = input.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
                         break;
-                    case 'rot13':
-                        result = input.replace(/[a-zA-Z]/g, char =>
-                            String.fromCharCode(
-                                char.charCodeAt(0) + (char.toLowerCase() < 'n' ? 13 : -13)
-                            )
-                        );
-                        break;
-                    case 'morse':
-                        result = decodeMorse(input);
-                        break;
-                    case 'url':
-                        result = decodeURIComponent(input);
-                        break;
-                    case 'binary':
-                        result = input.split(' ').map(byte => String.fromCharCode(parseInt(byte, 2))).join('');
-                        break;
                     default:
                         throw new Error('Unsupported decoding type');
                 }
@@ -181,80 +145,86 @@
             }
         }
 
-        // Fixed Base85 functions
-        const BASE85_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+-;<=>?@^_`{|}~";
+        // Base85 encoding function
         function encodeBase85(input) {
             const encoder = new TextEncoder();
             const bytes = encoder.encode(input);
             let result = '';
-            let value = 0;
-            let count = 0;
-
-            for (const byte of bytes) {
-                value = value * 256 + byte;
-                count++;
-
-                if (count === 4) {
-                    for (let i = 4; i >= 0; i--) {
-                        result += BASE85_CHARS.charAt(Math.floor(value / Math.pow(85, i)) % 85);
-                    }
-                    value = 0;
-                    count = 0;
+            for (let i = 0; i < bytes.length; i += 4) {
+                const chunk = bytes.slice(i, i + 4);
+                let value = 0;
+                for (let j = 0; j < chunk.length; j++) {
+                    value = (value << 8) + chunk[j];
                 }
+                let encoded = '';
+                for (let j = 0; j < 5; j++) {
+                    encoded = String.fromCharCode((value % 85) + 33) + encoded;
+                    value = Math.floor(value / 85);
+                }
+                result += encoded;
             }
-
-            if (count > 0) {
-                for (let i = 0; i < 4 - count; i++) {
-                    value *= 256;
-                }
-                for (let i = 4; i >= 0; i--) {
-                    result += BASE85_CHARS.charAt(Math.floor(value / Math.pow(85, i)) % 85);
-                }
-            }
-
             return result;
         }
 
+        // Base85 decoding function
         function decodeBase85(input) {
             const decoder = new TextDecoder();
-            let value = 0;
-            let count = 0;
-            const bytes = [];
-
-            for (const char of input) {
-                const index = BASE85_CHARS.indexOf(char);
-                if (index === -1) {
-                    throw new Error('Invalid Base85 character');
+            let bytes = [];
+            for (let i = 0; i < input.length; i += 5) {
+                const chunk = input.slice(i, i + 5);
+                let value = 0;
+                for (let j = 0; j < chunk.length; j++) {
+                    value = value * 85 + (chunk.charCodeAt(j) - 33);
                 }
-
-                value = value * 85 + index;
-                count++;
-
-                if (count === 5) {
-                    for (let i = 3; i >= 0; i--) {
-                        bytes.push((value >> (i * 8)) & 0xFF);
-                    }
-                    value = 0;
-                    count = 0;
+                let decoded = [];
+                for (let j = 3; j >= 0; j--) {
+                    decoded[j] = value & 0xFF;
+                    value >>= 8;
                 }
+                bytes = bytes.concat(decoded);
             }
-
-            if (count > 0) {
-                for (let i = 0; i < 5 - count; i++) {
-                    value *= 85;
-                }
-                for (let i = 3; i >= 0; i--) {
-                    const byte = (value >> (i * 8)) & 0xFF;
-                    if (byte !== 0) {
-                        bytes.push(byte);
-                    }
-                }
-            }
-
             return decoder.decode(new Uint8Array(bytes));
         }
 
-        // Base32, Morse Code, and other functions remain the same as provided earlier.
+        // Base32 encoding function
+        function base32Encode(input) {
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+            let bits = '';
+            let encoded = '';
+
+            for (let i = 0; i < input.length; i++) {
+                bits += input.charCodeAt(i).toString(2).padStart(8, '0');
+            }
+
+            for (let i = 0; i < bits.length; i += 5) {
+                const chunk = bits.substring(i, i + 5).padEnd(5, '0');
+                const index = parseInt(chunk, 2);
+                encoded += alphabet[index];
+            }
+
+            return encoded.padEnd(Math.ceil(encoded.length / 8) * 8, '=');
+        }
+
+        // Base32 decoding function
+        function base32Decode(input) {
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+            let bits = '';
+            let decoded = '';
+
+            input = input.replace(/=/g, '');
+            for (let i = 0; i < input.length; i++) {
+                const index = alphabet.indexOf(input[i].toUpperCase());
+                if (index === -1) throw new Error('Invalid Base32 character');
+                bits += index.toString(2).padStart(5, '0');
+            }
+
+            for (let i = 0; i < bits.length; i += 8) {
+                const byte = bits.substring(i, i + 8);
+                if (byte.length === 8) decoded += String.fromCharCode(parseInt(byte, 2));
+            }
+
+            return decoded;
+        }
     </script>
 </body>
 
