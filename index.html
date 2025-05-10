@@ -100,7 +100,7 @@
                         result = encodeBase85(input);
                         break;
                     case 'base64':
-                        result = btoa(input); // Base64 encoding
+                        result = btoa(unescape(encodeURIComponent(input))); // Base64 encoding
                         break;
                     case 'base32':
                         result = base32Encode(input);
@@ -128,7 +128,7 @@
                         result = decodeBase85(input);
                         break;
                     case 'base64':
-                        result = atob(input); // Base64 decoding
+                        result = decodeURIComponent(escape(atob(input))); // Base64 decoding
                         break;
                     case 'base32':
                         result = base32Decode(input);
@@ -145,19 +145,45 @@
             }
         }
 
-        // Base85 encoding function (placeholder for actual logic)
+        // Base85 encoding function
         function encodeBase85(input) {
             const encoder = new TextEncoder();
-            const encodedArray = encoder.encode(input);
-            return btoa(String.fromCharCode(...encodedArray)); // Using Base64 for simplicity
+            const bytes = encoder.encode(input);
+            let result = '';
+            for (let i = 0; i < bytes.length; i += 4) {
+                const chunk = bytes.slice(i, i + 4);
+                let value = 0;
+                for (let j = 0; j < chunk.length; j++) {
+                    value = (value << 8) + chunk[j];
+                }
+                let encoded = '';
+                for (let j = 0; j < 5; j++) {
+                    encoded = String.fromCharCode((value % 85) + 33) + encoded;
+                    value = Math.floor(value / 85);
+                }
+                result += encoded;
+            }
+            return result;
         }
 
-        // Base85 decoding function (placeholder for actual logic)
+        // Base85 decoding function
         function decodeBase85(input) {
-            const decodedBase64 = atob(input);
             const decoder = new TextDecoder();
-            const decodedArray = new Uint8Array([...decodedBase64].map(char => char.charCodeAt(0)));
-            return decoder.decode(decodedArray);
+            let bytes = [];
+            for (let i = 0; i < input.length; i += 5) {
+                const chunk = input.slice(i, i + 5);
+                let value = 0;
+                for (let j = 0; j < chunk.length; j++) {
+                    value = value * 85 + (chunk.charCodeAt(j) - 33);
+                }
+                let decoded = [];
+                for (let j = 3; j >= 0; j--) {
+                    decoded[j] = value & 0xFF;
+                    value >>= 8;
+                }
+                bytes = bytes.concat(decoded);
+            }
+            return decoder.decode(new Uint8Array(bytes));
         }
 
         // Base32 encoding function
