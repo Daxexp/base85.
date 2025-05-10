@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Converter</title>
+    <title>Image to Base64 Converter</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -26,13 +26,13 @@
 
         .content {
             margin: 20px auto;
-            max-width: 600px;
+            max-width: 800px;
             padding: 20px;
             background: white;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
-        textarea {
+        .content textarea {
             width: 100%;
             height: 150px;
             margin: 10px 0;
@@ -42,16 +42,7 @@
             border-radius: 5px;
         }
 
-        select {
-            padding: 10px;
-            font-size: 16px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            width: 100%;
-        }
-
-        button {
+        .content button {
             padding: 10px 20px;
             background: #4CAF50;
             color: white;
@@ -60,198 +51,85 @@
             cursor: pointer;
         }
 
-        button:hover {
+        .content button:hover {
             background: #45a049;
         }
 
-        #qrcode {
-            margin: 20px auto;
+        .content img {
+            margin-top: 20px;
+            max-width: 100%;
+            max-height: 300px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
     </style>
 </head>
 
 <body>
     <header>
-        <h1>Text Converter</h1>
-        <p>Real-Time Encode and Decode Text in Various Formats</p>
+        <h1>Image to Base64 Converter</h1>
+        <p>Convert images to Base64 strings and decode Base64 strings back to images</p>
     </header>
     <div class="content">
-        <textarea id="inputText" placeholder="Enter your text here..." oninput="convertText()"></textarea>
-        <select id="conversionType" onchange="convertText()">
-            <option value="base64">Base64</option>
-            <option value="base32">Base32</option>
-            <option value="base16">Base16</option>
-            <option value="rot13">Rot13</option>
-            <option value="morse">Morse Code</option>
-            <option value="url">URL Encoding</option>
-            <option value="binary">Binary</option>
-        </select>
-        <div>
-            <label>
-                <input type="radio" name="conversionMode" value="encode" checked onchange="convertText()"> Encode
-            </label>
-            <label>
-                <input type="radio" name="conversionMode" value="decode" onchange="convertText()"> Decode
-            </label>
+        <h2>Encode Image to Base64</h2>
+        <input type="file" id="imageInput" accept="image/*">
+        <button onclick="encodeImage()">Convert to Base64</button>
+        <textarea id="base64Output" placeholder="Base64 string will appear here..." readonly></textarea>
+        <button onclick="downloadBase64()">Download Base64</button>
+
+        <h2>Decode Base64 to Image</h2>
+        <textarea id="base64Input" placeholder="Paste your Base64 string here..."></textarea>
+        <button onclick="decodeBase64()">Convert to Image</button>
+        <div id="imagePreview">
+            <img id="decodedImage" src="" alt="Decoded image will appear here">
         </div>
-        <textarea id="outputText" placeholder="Output will appear here..." readonly></textarea>
-        <div id="qrcode"></div>
     </div>
     <footer>
-        <p>Made with ❤️ | DDp :)</p>
+        <p>Made with ❤️ by Daxexp</p>
     </footer>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
     <script>
-        const morseCodeMap = {
-            "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".", "F": "..-.",
-            "G": "--.", "H": "....", "I": "..", "J": ".---", "K": "-.-", "L": ".-..",
-            "M": "--", "N": "-.", "O": "---", "P": ".--.", "Q": "--.-", "R": ".-.",
-            "S": "...", "T": "-", "U": "..-", "V": "...-", "W": ".--", "X": "-..-",
-            "Y": "-.--", "Z": "--..", "1": ".----", "2": "..---", "3": "...--",
-            "4": "....-", "5": ".....", "6": "-....", "7": "--...", "8": "---..",
-            "9": "----.", "0": "-----", " ": "/", ".": ".-.-.-", ",": "--..--"
-        };
-
-        const reverseMorseCodeMap = Object.fromEntries(
-            Object.entries(morseCodeMap).map(([key, value]) => [value, key])
-        );
-
-        // Function to handle real-time conversion
-        function convertText() {
-            const input = document.getElementById('inputText').value;
-            const type = document.getElementById('conversionType').value;
-            const mode = document.querySelector('input[name="conversionMode"]:checked').value;
-
-            const qrCodeContainer = document.getElementById('qrcode');
-            qrCodeContainer.innerHTML = ''; // Clear QR code container
-
-            if (!input) {
-                document.getElementById('outputText').value = '';
+        function encodeImage() {
+            const imageInput = document.getElementById('imageInput');
+            const base64Output = document.getElementById('base64Output');
+            if (imageInput.files.length === 0) {
+                alert('Please select an image file.');
                 return;
             }
+            const file = imageInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function () {
+                base64Output.value = reader.result.split(',')[1];
+            };
+            reader.readAsDataURL(file);
+        }
 
+        function downloadBase64() {
+            const base64String = document.getElementById('base64Output').value;
+            if (!base64String) {
+                alert('No Base64 string to download!');
+                return;
+            }
+            const blob = new Blob([base64String], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'base64.txt';
+            link.click();
+        }
+
+        function decodeBase64() {
+            const base64Input = document.getElementById('base64Input').value.trim();
+            const decodedImage = document.getElementById('decodedImage');
+            if (!base64Input) {
+                alert('Please paste a Base64 string.');
+                return;
+            }
             try {
-                let result;
-                if (mode === 'encode') {
-                    switch (type) {
-                        case 'base64':
-                            result = btoa(unescape(encodeURIComponent(input))); // Base64 encoding
-                            break;
-                        case 'base32':
-                            result = base32Encode(input);
-                            break;
-                        case 'base16':
-                            result = input.split('').map(char => char.charCodeAt(0).toString(16).padStart(2, '0')).join('');
-                            break;
-                        case 'rot13':
-                            result = rot13Encode(input);
-                            break;
-                        case 'morse':
-                            result = morseEncode(input.toUpperCase());
-                            break;
-                        case 'url':
-                            result = encodeURIComponent(input);
-                            break;
-                        case 'binary':
-                            result = input.split('').map(char => char.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
-                            break;
-                        default:
-                            throw new Error('Unsupported encoding type');
-                    }
-                } else if (mode === 'decode') {
-                    switch (type) {
-                        case 'base64':
-                            result = decodeURIComponent(escape(atob(input))); // Base64 decoding
-                            break;
-                        case 'base32':
-                            result = base32Decode(input);
-                            break;
-                        case 'base16':
-                            result = input.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
-                            break;
-                        case 'rot13':
-                            result = rot13Encode(input); // Rot13 is symmetric
-                            break;
-                        case 'morse':
-                            result = morseDecode(input);
-                            break;
-                        case 'url':
-                            result = decodeURIComponent(input);
-                            break;
-                        case 'binary':
-                            result = input.split(' ').map(byte => String.fromCharCode(parseInt(byte, 2))).join('');
-                            break;
-                        default:
-                            throw new Error('Unsupported decoding type');
-                    }
-                }
-                document.getElementById('outputText').value = result;
-
-                // Generate QR code for the output
-                if (result) {
-                    QRCode.toCanvas(qrCodeContainer, result, { width: 200 });
-                }
-            } catch (e) {
-                document.getElementById('outputText').value = 'Error: Invalid input for the selected mode and type.';
+                decodedImage.src = `data:image/png;base64,${base64Input}`;
+                decodedImage.alt = "Decoded Image";
+            } catch (error) {
+                alert('Invalid Base64 string.');
             }
-        }
-
-        // Rot13 encoding/decoding function
-        function rot13Encode(input) {
-            return input.replace(/[a-zA-Z]/g, char => {
-                const base = char <= 'Z' ? 65 : 97;
-                return String.fromCharCode(((char.charCodeAt(0) - base + 13) % 26) + base);
-            });
-        }
-
-        // Morse Code encoding function
-        function morseEncode(input) {
-            return input.split('').map(char => morseCodeMap[char] || '').join(' ');
-        }
-
-        // Morse Code decoding function
-        function morseDecode(input) {
-            return input.split(' ').map(code => reverseMorseCodeMap[code] || '').join('');
-        }
-
-        // Base32 encoding function
-        function base32Encode(input) {
-            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-            let bits = '';
-            let encoded = '';
-
-            for (let i = 0; i < input.length; i++) {
-                bits += input.charCodeAt(i).toString(2).padStart(8, '0');
-            }
-
-            for (let i = 0; i < bits.length; i += 5) {
-                const chunk = bits.substring(i, i + 5).padEnd(5, '0');
-                const index = parseInt(chunk, 2);
-                encoded += alphabet[index];
-            }
-
-            return encoded.padEnd(Math.ceil(encoded.length / 8) * 8, '=');
-        }
-
-        // Base32 decoding function
-        function base32Decode(input) {
-            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-            let bits = '';
-            let decoded = '';
-
-            input = input.replace(/=/g, '');
-            for (let i = 0; i < input.length; i++) {
-                const index = alphabet.indexOf(input[i].toUpperCase());
-                if (index === -1) throw new Error('Invalid Base32 character');
-                bits += index.toString(2).padStart(5, '0');
-            }
-
-            for (let i = 0; i < bits.length; i += 8) {
-                const byte = bits.substring(i, i + 8);
-                if (byte.length === 8) decoded += String.fromCharCode(parseInt(byte, 2));
-            }
-
-            return decoded;
         }
     </script>
 </body>
