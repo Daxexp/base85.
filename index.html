@@ -74,7 +74,6 @@
     <div class="content">
         <textarea id="inputText" placeholder="Enter your text here..."></textarea>
         <select id="conversionType">
-            <option value="base91">Base91</option>
             <option value="base85">Base85</option>
             <option value="base64">Base64</option>
             <option value="base32">Base32</option>
@@ -101,9 +100,6 @@
             try {
                 let result;
                 switch (type) {
-                    case 'base91':
-                        result = encodeBase91(input);
-                        break;
                     case 'base85':
                         result = encodeBase85(input);
                         break;
@@ -148,9 +144,6 @@
             try {
                 let result;
                 switch (type) {
-                    case 'base91':
-                        result = decodeBase91(input);
-                        break;
                     case 'base85':
                         result = decodeBase85(input);
                         break;
@@ -188,7 +181,71 @@
             }
         }
 
-        // Morse Code encoding/decoding
+        // Base85 functions
+        function encodeBase85(input) {
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(input);
+            let b = 0, n = 0, result = '';
+            for (let i = 0; i < bytes.length; i++) {
+                b |= bytes[i] << n;
+                n += 8;
+                while (n >= 5) {
+                    result += String.fromCharCode((b & 31) + 33);
+                    b >>= 5;
+                    n -= 5;
+                }
+            }
+            if (n > 0) {
+                result += String.fromCharCode((b & 31) + 33);
+            }
+            return result;
+        }
+
+        function decodeBase85(input) {
+            const decoder = new TextDecoder();
+            let b = 0, n = 0, bytes = [];
+            for (let i = 0; i < input.length; i++) {
+                b |= (input.charCodeAt(i) - 33) << n;
+                n += 5;
+                if (n >= 8) {
+                    bytes.push(b & 255);
+                    b >>= 8;
+                    n -= 8;
+                }
+            }
+            return decoder.decode(new Uint8Array(bytes));
+        }
+
+        // Base32 functions
+        const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+        function base32Encode(input) {
+            const encoder = new TextEncoder();
+            const bytes = encoder.encode(input);
+            let bits = '', result = '';
+            bytes.forEach(byte => bits += byte.toString(2).padStart(8, '0'));
+            for (let i = 0; i < bits.length; i += 5) {
+                const chunk = bits.substr(i, 5).padEnd(5, '0');
+                result += BASE32_ALPHABET[parseInt(chunk, 2)];
+            }
+            return result.padEnd(Math.ceil(result.length / 8) * 8, '=');
+        }
+
+        function base32Decode(input) {
+            input = input.replace(/=/g, '');
+            let bits = '', result = '';
+            for (let char of input) {
+                const index = BASE32_ALPHABET.indexOf(char);
+                if (index === -1) throw new Error('Invalid Base32 character');
+                bits += index.toString(2).padStart(5, '0');
+            }
+            for (let i = 0; i < bits.length; i += 8) {
+                const byte = bits.substr(i, 8);
+                if (byte.length === 8) result += String.fromCharCode(parseInt(byte, 2));
+            }
+            return result;
+        }
+
+        // Morse Code functions
         const MORSE_CODE = {
             'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
             'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
@@ -198,18 +255,15 @@
             '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..',
             '9': '----.', '0': '-----', ' ': '/'
         };
-        const REVERSE_MORSE_CODE = Object.fromEntries(Object.entries(MORSE_CODE).map(([k, v]) => [v, k]));
+        const REVERSE_MORSE = Object.fromEntries(Object.entries(MORSE_CODE).map(([k, v]) => [v, k]));
 
         function encodeMorse(input) {
             return input.toUpperCase().split('').map(char => MORSE_CODE[char] || '').join(' ');
         }
 
         function decodeMorse(input) {
-            return input.split(' ').map(code => REVERSE_MORSE_CODE[code] || '').join('');
+            return input.split(' ').map(code => REVERSE_MORSE[code] || '').join('');
         }
-
-        // Base91, Base85, Base32, and Base16 functions remain unchanged (already implemented in the previous version).
-        // These can be reused as-is.
     </script>
 </body>
 
