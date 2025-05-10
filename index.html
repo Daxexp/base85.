@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Converter</title>
+    <title>Real-Time Text Converter</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -50,25 +50,12 @@
             border-radius: 5px;
             width: 100%;
         }
-
-        button {
-            padding: 10px 20px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #45a049;
-        }
     </style>
 </head>
 
 <body>
     <header>
-        <h1>Text Converter</h1>
+        <h1>Real-Time Text Converter</h1>
         <p>Encode and Decode Text in Various Formats</p>
     </header>
     <div class="content">
@@ -82,10 +69,6 @@
             <option value="url">URL Encoding</option>
             <option value="binary">Binary</option>
         </select>
-        <div>
-            <button onclick="encodeText()">Encode</button>
-            <button onclick="decodeText()">Decode</button>
-        </div>
         <textarea id="outputText" placeholder="Output will appear here..." readonly></textarea>
     </div>
     <footer>
@@ -101,81 +84,67 @@
         };
         const reverseMorseCodeMap = Object.fromEntries(Object.entries(morseCodeMap).map(([k, v]) => [v, k]));
 
-        // Function to encode text
-        function encodeText() {
+        // Add event listeners for real-time conversion
+        document.getElementById('inputText').addEventListener('input', convertRealTime);
+        document.getElementById('conversionType').addEventListener('change', convertRealTime);
+
+        function convertRealTime() {
             const input = document.getElementById('inputText').value;
             const type = document.getElementById('conversionType').value;
+            const output = document.getElementById('outputText');
+
             try {
-                let result;
-                switch (type) {
-                    case 'base64':
-                        result = btoa(unescape(encodeURIComponent(input))); // Base64 encoding
-                        break;
-                    case 'base32':
-                        result = base32Encode(input);
-                        break;
-                    case 'base16':
-                        result = input.split('').map(char => char.charCodeAt(0).toString(16).padStart(2, '0')).join('');
-                        break;
-                    case 'rot13':
-                        result = input.replace(/[A-Za-z]/g, char =>
-                            String.fromCharCode(char.charCodeAt(0) + (char.toLowerCase() < 'n' ? 13 : -13))
-                        );
-                        break;
-                    case 'morse':
-                        result = input.toUpperCase().split('').map(char => morseCodeMap[char] || '?').join(' ');
-                        break;
-                    case 'url':
-                        result = encodeURIComponent(input); // URL encoding
-                        break;
-                    case 'binary':
-                        result = input.split('').map(char => char.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
-                        break;
-                    default:
-                        throw new Error('Unsupported encoding type');
-                }
-                document.getElementById('outputText').value = result;
+                const encoded = encode(input, type);
+                const decoded = decode(encoded, type);
+                output.value = `Encoded: ${encoded}\n\nDecoded: ${decoded}`;
             } catch (e) {
-                alert("Error encoding the text. Please ensure it's a valid input!");
+                output.value = "Error during conversion!";
             }
         }
 
-        // Function to decode text
-        function decodeText() {
-            const input = document.getElementById('inputText').value;
-            const type = document.getElementById('conversionType').value;
-            try {
-                let result;
-                switch (type) {
-                    case 'base64':
-                        result = decodeURIComponent(escape(atob(input))); // Base64 decoding
-                        break;
-                    case 'base32':
-                        result = base32Decode(input);
-                        break;
-                    case 'base16':
-                        result = input.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
-                        break;
-                    case 'rot13':
-                        result = input.replace(/[A-Za-z]/g, char =>
-                            String.fromCharCode(char.charCodeAt(0) + (char.toLowerCase() < 'n' ? 13 : -13))
-                        );
-                        break;
-                    case 'morse':
-                        result = input.split(' ').map(code => reverseMorseCodeMap[code] || '?').join('');
-                        break;
-                    case 'url':
-                        result = decodeURIComponent(input); // URL decoding
-                        break;
-                    case 'binary':
-                        result = input.split(' ').map(byte => String.fromCharCode(parseInt(byte, 2))).join('');
-                        break;
-                    default:
-                        throw new Error('Unsupported decoding type');
-                }
-                document.getElementById('outputText').value = result;
-            } catch (e) {
-                alert("Error decoding the text. Please ensure it's a valid encoded input!");
+        function encode(input, type) {
+            switch (type) {
+                case 'base64':
+                    return btoa(unescape(encodeURIComponent(input))); // Base64 encoding
+                case 'base32':
+                    return base32Encode(input);
+                case 'base16':
+                    return input.split('').map(char => char.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+                case 'rot13':
+                    return input.replace(/[A-Za-z]/g, char =>
+                        String.fromCharCode(char.charCodeAt(0) + (char.toLowerCase() < 'n' ? 13 : -13))
+                    );
+                case 'morse':
+                    return input.toUpperCase().split('').map(char => morseCodeMap[char] || '?').join(' ');
+                case 'url':
+                    return encodeURIComponent(input); // URL encoding
+                case 'binary':
+                    return input.split('').map(char => char.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
+                default:
+                    throw new Error('Unsupported encoding type');
+            }
+        }
+
+        function decode(input, type) {
+            switch (type) {
+                case 'base64':
+                    return decodeURIComponent(escape(atob(input))); // Base64 decoding
+                case 'base32':
+                    return base32Decode(input);
+                case 'base16':
+                    return input.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
+                case 'rot13':
+                    return input.replace(/[A-Za-z]/g, char =>
+                        String.fromCharCode(char.charCodeAt(0) + (char.toLowerCase() < 'n' ? 13 : -13))
+                    );
+                case 'morse':
+                    return input.split(' ').map(code => reverseMorseCodeMap[code] || '?').join('');
+                case 'url':
+                    return decodeURIComponent(input); // URL decoding
+                case 'binary':
+                    return input.split(' ').map(byte => String.fromCharCode(parseInt(byte, 2))).join('');
+                default:
+                    throw new Error('Unsupported decoding type');
             }
         }
 
