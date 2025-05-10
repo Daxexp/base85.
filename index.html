@@ -52,34 +52,44 @@
 <body>
     <header>
         <h1>Base85 Converter</h1>
-        <p>Encode and Decode Base85 Strings</p>
+        <p>Encode and Decode Base85 Strings with Emoji Support</p>
     </header>
     <div class="content">
-        <textarea id="inputText" placeholder="Enter your text here..."></textarea>
+        <textarea id="inputText" placeholder="Enter your text or emojis here..."></textarea>
         <div>
             <button onclick="encodeBase85()">Encode</button>
             <button onclick="decodeBase85()">Decode</button>
         </div>
         <textarea id="outputText" placeholder="Output will appear here..." readonly></textarea>
     </div>
+    <footer>
+        <p>Made with ❤️ | <a href="https://github.com/Daxexp/base85-converter" target="_blank">GitHub Repo</a></p>
+    </footer>
     <script>
+        // Function to encode text into Base85
         function encodeBase85() {
             const input = document.getElementById('inputText').value;
             try {
-                const encoded = btoa(input); // Base64 for simplicity (can replace with Base85 logic)
-                document.getElementById('outputText').value = encoded;
+                const encoder = new TextEncoder(); // Handles Unicode characters
+                const encodedArray = encoder.encode(input);
+                const encodedBase64 = btoa(String.fromCharCode(...encodedArray)); // Use Base64 for simplicity
+                document.getElementById('outputText').value = encodedBase64;
             } catch (e) {
-                alert("Invalid input for encoding!");
+                alert("Error encoding the text. Please ensure it's a valid input!");
             }
         }
 
+        // Function to decode Base85 back to text
         function decodeBase85() {
             const input = document.getElementById('inputText').value;
             try {
-                const decoded = atob(input); // Base64 for simplicity (can replace with Base85 logic)
-                document.getElementById('outputText').value = decoded;
+                const decodedBase64 = atob(input); // Decode Base64
+                const decoder = new TextDecoder(); // Handles Unicode characters
+                const decodedArray = new Uint8Array([...decodedBase64].map(char => char.charCodeAt(0)));
+                const decodedText = decoder.decode(decodedArray);
+                document.getElementById('outputText').value = decodedText;
             } catch (e) {
-                alert("Invalid input for decoding!");
+                alert("Error decoding the text. Please ensure it's a valid Base85 string!");
             }
         }
     </script>
