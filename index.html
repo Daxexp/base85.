@@ -42,7 +42,7 @@
             border-radius: 5px;
         }
 
-        select, input[type="file"] {
+        select {
             padding: 10px;
             font-size: 16px;
             margin: 10px 0;
@@ -85,7 +85,6 @@
             <option value="morse">Morse Code</option>
             <option value="url">URL Encoding</option>
             <option value="binary">Binary</option>
-            <option value="qr">QR Code</option>
         </select>
         <div>
             <label>
@@ -97,13 +96,11 @@
         </div>
         <textarea id="outputText" placeholder="Output will appear here..." readonly></textarea>
         <div id="qrcode"></div>
-        <input type="file" id="qrInput" accept="image/*" style="display: none;" onchange="decodeQRCode(event)">
     </div>
     <footer>
         <p>Made with ❤️ | DDp :)</p>
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
     <script>
         const morseCodeMap = {
             "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".", "F": "..-.",
@@ -128,7 +125,7 @@
             const qrCodeContainer = document.getElementById('qrcode');
             qrCodeContainer.innerHTML = ''; // Clear QR code container
 
-            if (!input && type !== "qr") {
+            if (!input) {
                 document.getElementById('outputText').value = '';
                 return;
             }
@@ -158,10 +155,6 @@
                         case 'binary':
                             result = input.split('').map(char => char.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
                             break;
-                        case 'qr':
-                            QRCode.toCanvas(qrCodeContainer, input, { width: 200 });
-                            result = "QR Code generated below.";
-                            break;
                         default:
                             throw new Error('Unsupported encoding type');
                     }
@@ -188,42 +181,19 @@
                         case 'binary':
                             result = input.split(' ').map(byte => String.fromCharCode(parseInt(byte, 2))).join('');
                             break;
-                        case 'qr':
-                            document.getElementById('qrInput').click(); // Trigger file input for QR decoding
-                            return;
                         default:
                             throw new Error('Unsupported decoding type');
                     }
                 }
                 document.getElementById('outputText').value = result;
+
+                // Generate QR code for the output
+                if (result) {
+                    QRCode.toCanvas(qrCodeContainer, result, { width: 200 });
+                }
             } catch (e) {
                 document.getElementById('outputText').value = 'Error: Invalid input for the selected mode and type.';
             }
-        }
-
-        // QR decoding function
-        function decodeQRCode(event) {
-            const file = event.target.files[0];
-            const reader = new FileReader();
-            reader.onload = function () {
-                const img = new Image();
-                img.onload = function () {
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    context.drawImage(img, 0, 0, img.width, img.height);
-                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, canvas.width, canvas.height);
-                    if (code) {
-                        document.getElementById('outputText').value = code.data;
-                    } else {
-                        document.getElementById('outputText').value = 'Error: Unable to decode QR code.';
-                    }
-                };
-                img.src = reader.result;
-            };
-            reader.readAsDataURL(file);
         }
 
         // Rot13 encoding/decoding function
