@@ -147,54 +147,55 @@
             }
         }
 
-        // Base85 encoding function
+        // Base85 (Ascii85) encoding function
         function encodeBase85(input) {
             const encoder = new TextEncoder();
             const bytes = encoder.encode(input);
             let result = '';
-            const padding = (4 - (bytes.length % 4)) % 4;
-
-            const paddedBytes = new Uint8Array(bytes.length + padding);
-            paddedBytes.set(bytes);
+            const paddingLength = (4 - (bytes.length % 4)) % 4;
+            const paddedBytes = new Uint8Array([...bytes, ...new Uint8Array(paddingLength).fill(0)]);
 
             for (let i = 0; i < paddedBytes.length; i += 4) {
-                const chunk = (paddedBytes[i] << 24) | (paddedBytes[i + 1] << 16) | (paddedBytes[i + 2] << 8) | (paddedBytes[i + 3]);
-                let encodedChunk = '';
-                for (let j = 0; j < 5; j++) {
-                    encodedChunk = String.fromCharCode((chunk % 85) + 33) + encodedChunk;
-                    chunk = Math.floor(chunk / 85);
+                const chunk = paddedBytes.slice(i, i + 4);
+                let value = 0;
+                for (let j = 0; j < 4; j++) {
+                    value = (value << 8) + chunk[j];
                 }
-                result += encodedChunk;
+                let encoded = '';
+                for (let j = 0; j < 5; j++) {
+                    encoded = String.fromCharCode((value % 85) + 33) + encoded;
+                    value = Math.floor(value / 85);
+                }
+                result += encoded;
             }
 
-            if (padding > 0) {
-                result = result.slice(0, -(padding));
-            }
-
-            return result;
+            // Remove extra padding characters
+            return result.slice(0, result.length - paddingLength);
         }
 
-        // Base85 decoding function
+        // Base85 (Ascii85) decoding function
         function decodeBase85(input) {
             const decoder = new TextDecoder();
-            const padding = (5 - (input.length % 5)) % 5;
+            const paddingLength = (5 - (input.length % 5)) % 5;
+            const paddedInput = input + 'u'.repeat(paddingLength);
+            let bytes = [];
 
-            input += 'u'.repeat(padding);
-
-            const bytes = [];
-            for (let i = 0; i < input.length; i += 5) {
-                let chunk = 0;
+            for (let i = 0; i < paddedInput.length; i += 5) {
+                const chunk = paddedInput.slice(i, i + 5);
+                let value = 0;
                 for (let j = 0; j < 5; j++) {
-                    chunk = chunk * 85 + (input.charCodeAt(i + j) - 33);
+                    value = value * 85 + (chunk.charCodeAt(j) - 33);
                 }
-                bytes.push((chunk >>> 24) & 0xFF, (chunk >>> 16) & 0xFF, (chunk >>> 8) & 0xFF, chunk & 0xFF);
+                let decoded = [];
+                for (let j = 3; j >= 0; j--) {
+                    decoded[j] = value & 0xFF;
+                    value >>= 8;
+                }
+                bytes = bytes.concat(decoded);
             }
 
-            if (padding > 0) {
-                bytes.splice(-padding);
-            }
-
-            return decoder.decode(new Uint8Array(bytes));
+            // Remove padding bytes
+            return decoder.decode(new Uint8Array(bytes.slice(0, bytes.length - paddingLength)));
         }
 
         // Base32 encoding function
