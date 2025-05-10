@@ -1,2 +1,2 @@
-# en&de.
-A simple tool to encode and decode strings.
+# en&de Base.
+A simple tool to encode and decode Base strings.
