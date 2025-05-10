@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Base85 Converter</title>
+    <title>Text Converter</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,14 +13,17 @@
             text-align: center;
             background: #f9f9f9;
         }
+
         header {
             background: #4CAF50;
             color: white;
             padding: 20px 0;
         }
+
         header h1 {
             margin: 0;
         }
+
         .content {
             margin: 20px auto;
             max-width: 600px;
@@ -27,6 +31,7 @@
             background: white;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
+
         textarea {
             width: 100%;
             height: 150px;
@@ -36,6 +41,16 @@
             border: 1px solid #ccc;
             border-radius: 5px;
         }
+
+        select {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+        }
+
         button {
             padding: 10px 20px;
             background: #4CAF50;
@@ -44,21 +59,29 @@
             border-radius: 5px;
             cursor: pointer;
         }
+
         button:hover {
             background: #45a049;
         }
     </style>
 </head>
+
 <body>
     <header>
-        <h1>Base85 Converter</h1>
-        <p>Encode and Decode Base85 Strings</p>
+        <h1>Text Converter</h1>
+        <p>Encode and Decode Text in Various Formats</p>
     </header>
     <div class="content">
         <textarea id="inputText" placeholder="Enter your text here..."></textarea>
+        <select id="conversionType">
+            <option value="base85">Base85</option>
+            <option value="base64">Base64</option>
+            <option value="base32">Base32</option>
+            <option value="hex">Hexadecimal</option>
+        </select>
         <div>
-            <button onclick="encodeBase85()">Encode</button>
-            <button onclick="decodeBase85()">Decode</button>
+            <button onclick="encodeText()">Encode</button>
+            <button onclick="decodeText()">Decode</button>
         </div>
         <textarea id="outputText" placeholder="Output will appear here..." readonly></textarea>
     </div>
@@ -66,32 +89,117 @@
         <p>Made with ❤️ | DDp :)</p>
     </footer>
     <script>
-        // Function to encode text into Base85
-        function encodeBase85() {
+        // Function to encode text
+        function encodeText() {
             const input = document.getElementById('inputText').value;
+            const type = document.getElementById('conversionType').value;
             try {
-                const encoder = new TextEncoder(); // Handles Unicode characters
-                const encodedArray = encoder.encode(input);
-                const encodedBase64 = btoa(String.fromCharCode(...encodedArray)); // Use Base64 for simplicity
-                document.getElementById('outputText').value = encodedBase64;
+                let result;
+                switch (type) {
+                    case 'base85':
+                        result = encodeBase85(input);
+                        break;
+                    case 'base64':
+                        result = btoa(input); // Base64 encoding
+                        break;
+                    case 'base32':
+                        result = base32Encode(input);
+                        break;
+                    case 'hex':
+                        result = input.split('').map(char => char.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+                        break;
+                    default:
+                        throw new Error('Unsupported encoding type');
+                }
+                document.getElementById('outputText').value = result;
             } catch (e) {
                 alert("Error encoding the text. Please ensure it's a valid input!");
             }
         }
 
-        // Function to decode Base85 back to text
-        function decodeBase85() {
+        // Function to decode text
+        function decodeText() {
             const input = document.getElementById('inputText').value;
+            const type = document.getElementById('conversionType').value;
             try {
-                const decodedBase64 = atob(input); // Decode Base64
-                const decoder = new TextDecoder(); // Handles Unicode characters
-                const decodedArray = new Uint8Array([...decodedBase64].map(char => char.charCodeAt(0)));
-                const decodedText = decoder.decode(decodedArray);
-                document.getElementById('outputText').value = decodedText;
+                let result;
+                switch (type) {
+                    case 'base85':
+                        result = decodeBase85(input);
+                        break;
+                    case 'base64':
+                        result = atob(input); // Base64 decoding
+                        break;
+                    case 'base32':
+                        result = base32Decode(input);
+                        break;
+                    case 'hex':
+                        result = input.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
+                        break;
+                    default:
+                        throw new Error('Unsupported decoding type');
+                }
+                document.getElementById('outputText').value = result;
             } catch (e) {
-                alert("Error decoding the text. Please ensure it's a valid Base85 string!");
+                alert("Error decoding the text. Please ensure it's a valid encoded input!");
             }
+        }
+
+        // Base85 encoding function (placeholder for actual logic)
+        function encodeBase85(input) {
+            const encoder = new TextEncoder();
+            const encodedArray = encoder.encode(input);
+            return btoa(String.fromCharCode(...encodedArray)); // Using Base64 for simplicity
+        }
+
+        // Base85 decoding function (placeholder for actual logic)
+        function decodeBase85(input) {
+            const decodedBase64 = atob(input);
+            const decoder = new TextDecoder();
+            const decodedArray = new Uint8Array([...decodedBase64].map(char => char.charCodeAt(0)));
+            return decoder.decode(decodedArray);
+        }
+
+        // Base32 encoding function
+        function base32Encode(input) {
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+            let bits = '';
+            let encoded = '';
+
+            for (let i = 0; i < input.length; i++) {
+                bits += input.charCodeAt(i).toString(2).padStart(8, '0');
+            }
+
+            for (let i = 0; i < bits.length; i += 5) {
+                const chunk = bits.substring(i, i + 5).padEnd(5, '0');
+                const index = parseInt(chunk, 2);
+                encoded += alphabet[index];
+            }
+
+            return encoded.padEnd(Math.ceil(encoded.length / 8) * 8, '=');
+        }
+
+        // Base32 decoding function
+        function base32Decode(input) {
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+            let bits = '';
+            let decoded = '';
+
+            input = input.replace(/=/g, '');
+            for (let i = 0; i < input.length; i++) {
+                const index = alphabet.indexOf(input[i].toUpperCase());
+                if (index === -1) throw new Error('Invalid Base32 character');
+                bits += index.toString(2).padStart(5, '0');
+            }
+
+            for (let i = 0; i < bits.length; i += 8) {
+                const byte = bits.substring(i, i + 8);
+                if (byte.length === 8) decoded += String.fromCharCode(parseInt(byte, 2));
+            }
+
+            return decoded;
         }
     </script>
 </body>
+
 </html>
