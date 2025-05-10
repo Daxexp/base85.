@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Text Converter</title>
+    <title>Text Converter</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -50,17 +50,30 @@
             border-radius: 5px;
             width: 100%;
         }
+
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
     </style>
 </head>
 
 <body>
     <header>
-        <h1>Real-Time Text Converter</h1>
-        <p>Encode and Decode Text in Various Formats</p>
+        <h1>Text Converter</h1>
+        <p>Real-Time Encode and Decode Text in Various Formats</p>
     </header>
     <div class="content">
-        <textarea id="inputText" placeholder="Enter your text here..."></textarea>
-        <select id="conversionType">
+        <textarea id="inputText" placeholder="Enter your text here..." oninput="convertText()"></textarea>
+        <select id="conversionType" onchange="convertText()">
             <option value="base64">Base64</option>
             <option value="base32">Base32</option>
             <option value="base16">Base16</option>
@@ -69,6 +82,14 @@
             <option value="url">URL Encoding</option>
             <option value="binary">Binary</option>
         </select>
+        <div>
+            <label>
+                <input type="radio" name="conversionMode" value="encode" checked onchange="convertText()"> Encode
+            </label>
+            <label>
+                <input type="radio" name="conversionMode" value="decode" onchange="convertText()"> Decode
+            </label>
+        </div>
         <textarea id="outputText" placeholder="Output will appear here..." readonly></textarea>
     </div>
     <footer>
@@ -76,76 +97,107 @@
     </footer>
     <script>
         const morseCodeMap = {
-            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.', 'G': '--.', 'H': '....',
-            'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---', 'P': '.--.',
-            'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
-            'Y': '-.--', 'Z': '--..', '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....',
-            '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----', ' ': '/'
+            "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".", "F": "..-.",
+            "G": "--.", "H": "....", "I": "..", "J": ".---", "K": "-.-", "L": ".-..",
+            "M": "--", "N": "-.", "O": "---", "P": ".--.", "Q": "--.-", "R": ".-.",
+            "S": "...", "T": "-", "U": "..-", "V": "...-", "W": ".--", "X": "-..-",
+            "Y": "-.--", "Z": "--..", "1": ".----", "2": "..---", "3": "...--",
+            "4": "....-", "5": ".....", "6": "-....", "7": "--...", "8": "---..",
+            "9": "----.", "0": "-----", " ": "/", ".": ".-.-.-", ",": "--..--"
         };
-        const reverseMorseCodeMap = Object.fromEntries(Object.entries(morseCodeMap).map(([k, v]) => [v, k]));
 
-        // Add event listeners for real-time conversion
-        document.getElementById('inputText').addEventListener('input', convertRealTime);
-        document.getElementById('conversionType').addEventListener('change', convertRealTime);
+        const reverseMorseCodeMap = Object.fromEntries(
+            Object.entries(morseCodeMap).map(([key, value]) => [value, key])
+        );
 
-        function convertRealTime() {
+        // Function to handle real-time conversion
+        function convertText() {
             const input = document.getElementById('inputText').value;
             const type = document.getElementById('conversionType').value;
-            const output = document.getElementById('outputText');
+            const mode = document.querySelector('input[name="conversionMode"]:checked').value;
+
+            if (!input) {
+                document.getElementById('outputText').value = '';
+                return;
+            }
 
             try {
-                const encoded = encode(input, type);
-                const decoded = decode(encoded, type);
-                output.value = `Encoded: ${encoded}\n\nDecoded: ${decoded}`;
+                let result;
+                if (mode === 'encode') {
+                    switch (type) {
+                        case 'base64':
+                            result = btoa(unescape(encodeURIComponent(input))); // Base64 encoding
+                            break;
+                        case 'base32':
+                            result = base32Encode(input);
+                            break;
+                        case 'base16':
+                            result = input.split('').map(char => char.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+                            break;
+                        case 'rot13':
+                            result = rot13Encode(input);
+                            break;
+                        case 'morse':
+                            result = morseEncode(input.toUpperCase());
+                            break;
+                        case 'url':
+                            result = encodeURIComponent(input);
+                            break;
+                        case 'binary':
+                            result = input.split('').map(char => char.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
+                            break;
+                        default:
+                            throw new Error('Unsupported encoding type');
+                    }
+                } else if (mode === 'decode') {
+                    switch (type) {
+                        case 'base64':
+                            result = decodeURIComponent(escape(atob(input))); // Base64 decoding
+                            break;
+                        case 'base32':
+                            result = base32Decode(input);
+                            break;
+                        case 'base16':
+                            result = input.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
+                            break;
+                        case 'rot13':
+                            result = rot13Encode(input); // Rot13 is symmetric
+                            break;
+                        case 'morse':
+                            result = morseDecode(input);
+                            break;
+                        case 'url':
+                            result = decodeURIComponent(input);
+                            break;
+                        case 'binary':
+                            result = input.split(' ').map(byte => String.fromCharCode(parseInt(byte, 2))).join('');
+                            break;
+                        default:
+                            throw new Error('Unsupported decoding type');
+                    }
+                }
+                document.getElementById('outputText').value = result;
             } catch (e) {
-                output.value = "Error during conversion!";
+                document.getElementById('outputText').value = 'Error: Invalid input for the selected mode and type.';
             }
         }
 
-        function encode(input, type) {
-            switch (type) {
-                case 'base64':
-                    return btoa(unescape(encodeURIComponent(input))); // Base64 encoding
-                case 'base32':
-                    return base32Encode(input);
-                case 'base16':
-                    return input.split('').map(char => char.charCodeAt(0).toString(16).padStart(2, '0')).join('');
-                case 'rot13':
-                    return input.replace(/[A-Za-z]/g, char =>
-                        String.fromCharCode(char.charCodeAt(0) + (char.toLowerCase() < 'n' ? 13 : -13))
-                    );
-                case 'morse':
-                    return input.toUpperCase().split('').map(char => morseCodeMap[char] || '?').join(' ');
-                case 'url':
-                    return encodeURIComponent(input); // URL encoding
-                case 'binary':
-                    return input.split('').map(char => char.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
-                default:
-                    throw new Error('Unsupported encoding type');
-            }
+        // Rot13 encoding/decoding function
+        function rot13Encode(input) {
+            return input.replace(/[a-zA-Z]/g, char => {
+                const base = char <= 'Z' ? 65 : 97;
+                return String.fromCharCode(((char.charCodeAt(0) - base + 13) % 26) + base);
+            });
         }
 
-        function decode(input, type) {
-            switch (type) {
-                case 'base64':
-                    return decodeURIComponent(escape(atob(input))); // Base64 decoding
-                case 'base32':
-                    return base32Decode(input);
-                case 'base16':
-                    return input.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
-                case 'rot13':
-                    return input.replace(/[A-Za-z]/g, char =>
-                        String.fromCharCode(char.charCodeAt(0) + (char.toLowerCase() < 'n' ? 13 : -13))
-                    );
-                case 'morse':
-                    return input.split(' ').map(code => reverseMorseCodeMap[code] || '?').join('');
-                case 'url':
-                    return decodeURIComponent(input); // URL decoding
-                case 'binary':
-                    return input.split(' ').map(byte => String.fromCharCode(parseInt(byte, 2))).join('');
-                default:
-                    throw new Error('Unsupported decoding type');
-            }
+        // Morse Code encoding function
+        function morseEncode(input) {
+            return input.split('').map(char => morseCodeMap[char] || '').join(' ');
+        }
+
+        // Morse Code decoding function
+        function morseDecode(input) {
+            return input.split(' ').map(code => reverseMorseCodeMap[code] || '').join('');
         }
 
         // Base32 encoding function
